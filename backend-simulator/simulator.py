@@ -8,7 +8,7 @@ import pandas as pd
 from supabase import Client, create_client
 
 # ==============================================================================
-# 1. CONFIGURACIÓN DE CREDENCIALES DE SUPABASE
+# 1.  CONFIGURACIÓN DE CREDENCIALES DE SUPABASE
 # ==============================================================================
 # Reemplaza con tus datos reales de conexión
 SUPABASE_URL = "https://nsnrbmszjifxikxyenvi.supabase.co"
