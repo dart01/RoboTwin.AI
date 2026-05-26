@@ -2,8 +2,8 @@
 
 ¡Bienvenido al Gemelo Digital del Brazo Robótico! Este proyecto es un ecosistema completo que simula la física, cinemática y variables eléctricas de un brazo robótico industrial en tiempo real. Los datos son analizados instantáneamente por una Inteligencia Artificial para predecir fallas mecánicas o eléctricas antes de que ocurran, todo visualizado en una interfaz web 3D interactiva de alta fidelidad.
 
-🌐 **Enlace del Proyecto en Vivo:** [Tu Enlace de Vercel Aquí]
-▶️ **Backend Engine en la Nube:** [Tu Enlace de Render Aquí]
+🌐 **Enlace del Proyecto en Vivo:** https://robo-twin-ai.vercel.app/
+▶️ **Backend Engine en la Nube:** https://dashboard.render.com/web/srv-d8afrf28qa3s73eq5im0/deploys/dep-d8aftogjs32c7397926g?r=2026-05-26%4002%3A00%3A06%7E2026-05-26%4002%3A10%3A09
 
 ---
 
