@@ -1,23 +1,34 @@
 import math
 import os
 import random
+
+# 🆕 IMPORTACIONES COMPLETAS PARA FASTAPI Y DESPLIEGUE EN LA NUBE
+import threading
 import time
 from datetime import datetime, timezone
 
 import joblib
 import pandas as pd
+import uvicorn
 from dotenv import load_dotenv
+from fastapi import FastAPI
 from supabase import Client, create_client
 
+# Inicializamos la aplicación FastAPI que escuchará las peticiones de Render
+app = FastAPI(
+    title="Robotic Arm Telemetry Simulator",
+    description="Backend para el procesamiento de telemetría e inferencia de IA en tiempo real",
+)
+
 # ==============================================================================
-# 1.  CONFIGURACIÓN DE CREDENCIALES DE SUPABASE
+# 1. CONFIGURACIÓN DE CREDENCIALES DE SUPABASE
 # ==============================================================================
-# Reemplaza con tus datos reales de conexión
-#  Esto carga el archivo .env SOLO cuando está en el PC local
+# Carga el archivo .env local si existe. En Render leerá las Variables de Entorno del Panel.
 load_dotenv()
 
 SUPABASE_URL = os.environ.get("VITE_SUPABASE_URL")
 SUPABASE_KEY = os.environ.get("VITE_SUPABASE_ANON_KEY")
+
 try:
     supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
     print("📡 Conexión inicializada con Supabase.")
@@ -25,13 +36,14 @@ except Exception as e:
     print(f"❌ Error crítico al conectar con Supabase: {e}")
     exit(1)
 
+
 # ==============================================================================
 # 2. CARGA DEL MODELO DE INTELIGENCIA ARTIFICIAL
 # ==============================================================================
 print("🌲 Cargando modelo de detección de anomalías (Isolation Forest)...")
 try:
     ai_model = joblib.load("anomaly_detector.joblib")
-    print("✅ Inteligencia Artificial en línea y lista para la inferencia.")
+    print("✅  Inteligencia Artificial en línea y lista para la inferencia.")
 except Exception as e:
     print(
         f"❌ Error al cargar 'anomaly_detector.joblib'. ¿Ejecutaste primero train_anomaly_detector.py? Detalle: {e}"
@@ -43,9 +55,11 @@ except Exception as e:
 # 3. BUCLE DE SIMULACIÓN E INFERENCIA EN TIEMPO REAL
 # ==============================================================================
 def run_live_simulation():
-    print(
-        "\n🚀 Transmitiendo telemetría en vivo a Supabase... Presiona Ctrl+C para detener."
-    )
+    """
+    Esta función contiene tu bucle infinito original. Correrá de forma aislada
+    en un hilo secundario (background thread) para no congelar a FastAPI.
+    """
+    print("\n🚀 Transmitiendo telemetría en vivo a Supabase en segundo plano...")
     iteration = 0
     base_temperature = 36.0
 
@@ -87,7 +101,6 @@ def run_live_simulation():
                 temperature = round(base_temperature, 2)
 
         # --- 🏋️‍♂️ INFERENCIA DE LA IA CON PANDAS ---
-        # Creamos la estructura exacta que espera el Isolation Forest
         live_data = pd.DataFrame(
             [
                 {
@@ -105,13 +118,12 @@ def run_live_simulation():
         if prediction == 1:
             status = "OPERATIONAL"
         else:
-            # Si el modelo aísla el dato, evaluamos umbrales de peligro mecánico o eléctrico
             if current > 10.0 or torque > 35.0:
                 status = "FAILURE"
             else:
                 status = "WARNING"
 
-        # Imprimir logs informativos en la consola local
+        # Imprimir logs informativos en la consola local / Render logs
         print(
             f"🤖 J1:{j1}° | Temp:{temperature}°C | Torque:{torque}Nm | Amp:{current}A ──> [IA Veredicto: {status}]"
         )
@@ -121,16 +133,14 @@ def run_live_simulation():
             "j1_angle": j1,
             "j2_angle": j2,
             "j3_angle": j3,
-            "j4_angle": 0.0,  # Satisface la restricción NOT NULL de tu base de datos
-            "j5_angle": 0.0,  # Protege contra futuras restricciones similares
-            "j6_angle": 0.0,  # Protege contra futuras restricciones similares
+            "j4_angle": 0.0,
+            "j5_angle": 0.0,
+            "j6_angle": 0.0,
             "motor_temperature": temperature,
             "torque_nm": torque,
             "current_amp": current,
             "status": status,
-            "created_at": datetime.now(
-                timezone.utc
-            ).isoformat(),  # Formato UTC moderno sin advertencias
+            "created_at": datetime.now(timezone.utc).isoformat(),
         }
 
         # --- TRANSMISIÓN POR WEBSOCKET / INSERT A SUPABASE ---
@@ -143,5 +153,38 @@ def run_live_simulation():
         time.sleep(1)
 
 
+# ==============================================================================
+# 4. CONFIGURACIÓN DE RUTAS Y EVENTOS DE FASTAPI (Para Render)
+# ==============================================================================
+@app.on_event("startup")
+def start_background_simulation():
+    """
+    Este evento se dispara automáticamente en cuanto FastAPI arranca con éxito.
+    Crea un hilo 'daemon' para que la simulación corra sola de fondo.
+    """
+    sim_thread = threading.Thread(target=run_live_simulation, daemon=True)
+    sim_thread.start()
+    print("🧵 Hilo secundario del simulador iniciado de manera segura.")
+
+
+@app.get("/")
+def health_check():
+    """
+    Ruta raíz. Render la consultará constantemente para verificar si el
+    servidor está vivo. Al responder con un 200 OK, evitamos el error de 'Port Timeout'.
+    """
+    return {
+        "status": "ONLINE",
+        "service": "Robotic Arm Digital Twin - Physics & AI Engine",
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+    }
+
+
+# ==============================================================================
+# 5. EJECUCIÓN LOCAL
+# ==============================================================================
 if __name__ == "__main__":
-    run_live_simulation()
+    # Si ejecutas 'python simulator.py' localmente, levantará el servidor web en el puerto 8000
+    # igual que lo hará Render en la nube, permitiéndote probar todo de forma exacta.
+    print("🏠 Iniciando servidor local en el puerto 8000...")
+    uvicorn.run(app, host="0.0.0.0", port=8000)
