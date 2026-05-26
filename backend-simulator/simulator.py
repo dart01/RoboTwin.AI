@@ -1,19 +1,23 @@
 import math
+import os
 import random
 import time
 from datetime import datetime, timezone
 
 import joblib
 import pandas as pd
+from dotenv import load_dotenv
 from supabase import Client, create_client
 
 # ==============================================================================
 # 1.  CONFIGURACIÓN DE CREDENCIALES DE SUPABASE
 # ==============================================================================
 # Reemplaza con tus datos reales de conexión
-SUPABASE_URL = "https://nsnrbmszjifxikxyenvi.supabase.co"
-SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5zbnJibXN6amlmeGlreHllbnZpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk3MTk4NDMsImV4cCI6MjA5NTI5NTg0M30.QhdyhsWiSUOOdDjcgCWc1sDsuDqu0RRrmIQDeC19tbs"
+#  Esto carga el archivo .env SOLO cuando está en el PC local
+load_dotenv()
 
+SUPABASE_URL = os.environ.get("VITE_SUPABASE_URL")
+SUPABASE_KEY = os.environ.get("VITE_SUPABASE_ANON_KEY")
 try:
     supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
     print("📡 Conexión inicializada con Supabase.")
